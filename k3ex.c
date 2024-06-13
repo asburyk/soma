@@ -1,5 +1,6 @@
 #include <stdio.h>
-//
+#include <sys/time.h>
+
 int codes[70];
 
 int shapes[15] = {3, 5, 6, 9, 10, 12, 17, 18, 20, 24, 33, 34, 36, 40, 48};
@@ -88,17 +89,17 @@ int assignCodeBrown(int permCode, int kcode, struct perm4 *p1, struct perm4 *pB)
 // Returns 1 for x-plane
 // Returns 2 for y-plane
 // Returns 3 for z-plane
-int isPlane(struct perm4 p, int *v) {
-    if (p.p[0].x == p.p[1].x && p.p[1].x == p.p[2].x && p.p[2].x == p.p[3].x) {
-	*v = p.p[0].x;
+int isPlane(struct perm4 *p, int *v) {
+    if (p->p[0].x == p->p[1].x && p->p[1].x == p->p[2].x && p->p[2].x == p->p[3].x) {
+	*v = p->p[0].x;
 	return 1;
     }
-    if (p.p[0].y == p.p[1].y && p.p[1].y == p.p[2].y && p.p[2].y == p.p[3].y) {
-	*v = p.p[0].y;
+    if (p->p[0].y == p->p[1].y && p->p[1].y == p->p[2].y && p->p[2].y == p->p[3].y) {
+	*v = p->p[0].y;
 	return 2;
     }
-    if (p.p[0].z == p.p[1].z && p.p[1].z == p.p[2].z && p.p[2].z == p.p[3].z) {
-	*v = p.p[0].z;
+    if (p->p[0].z == p->p[1].z && p->p[1].z == p->p[2].z && p->p[2].z == p->p[3].z) {
+	*v = p->p[0].z;
 	return 3;
     }
     return 0;
@@ -109,13 +110,13 @@ int isPlane(struct perm4 p, int *v) {
 // Returns 2 on y-line
 // Returns 3 on z-line
 // Never returns plane (i.e., the nonzero return from isPlane should be put in plane)
-int is3Line(struct perm4 p, int plane, int *v) {
+int is3Line(struct perm4 *p, int plane, int *v) {
     int x[3] = {0, 0 ,0};
     int y[3] = {0, 0, 0};
     int z[3] = {0, 0, 0};
     if (plane != 1) {
 	for (int i = 0; i < 4; i++) {
-	    x[p.p[i].x]++;
+	    x[p->p[i].x]++;
 	}
 	for (int i = 0; i < 3; i++) {
 	    if (x[i] == 3) {
@@ -126,7 +127,7 @@ int is3Line(struct perm4 p, int plane, int *v) {
     }
     if (plane != 2) {
 	for (int i = 0; i < 4; i++) {
-	    y[p.p[i].y]++;
+	    y[p->p[i].y]++;
 	}
 	for (int i = 0; i < 3; i++) {
 	    if (y[i] == 3) {
@@ -137,7 +138,7 @@ int is3Line(struct perm4 p, int plane, int *v) {
     }
     if (plane != 3) {
 	for (int i = 0; i < 4; i++) {
-	    z[p.p[i].z]++;
+	    z[p->p[i].z]++;
 	}
 	for (int i = 0; i < 3; i++) {
 	    if (z[i] == 3) {
@@ -151,25 +152,25 @@ int is3Line(struct perm4 p, int plane, int *v) {
 
 // Returns 0 on false
 // Returns 1 on true
-int is22Line(struct perm4 p, int plane) {
+int is22Line(struct perm4 *p, int plane) {
     int a[3] = {0, 0, 0};
     int b[3] = {0, 0, 0};
     if (plane == 1) { // a=y, b=z
 	for (int i = 0; i < 4; i++) {
-	    a[p.p[i].y]++;
-	    b[p.p[i].z]++;
+	    a[p->p[i].y]++;
+	    b[p->p[i].z]++;
 	}
     } 
     if (plane == 2) { // a=x, b=z
 	for (int i = 0; i < 4; i++) {
-	    a[p.p[i].x]++;
-	    b[p.p[i].z]++;
+	    a[p->p[i].x]++;
+	    b[p->p[i].z]++;
 	}
     } 
     if (plane == 3) { // a=x, b=y
 	for (int i = 0; i < 4; i++) {
-	    a[p.p[i].x]++;
-	    b[p.p[i].y]++;
+	    a[p->p[i].x]++;
+	    b[p->p[i].y]++;
 	}
     }
     return (a[1] == b[1]) && (b[1] == 2) && ((a[0] == 1) ^ (b[0] == 1));
@@ -178,9 +179,9 @@ int is22Line(struct perm4 p, int plane) {
 
 // Returns -1 on false
 // Returns pos index on match
-int isIn(struct perm4 p, struct pos s) {
+int isIn(struct perm4 *p, struct pos *s) {
     for (int i = 0; i < 4; i++) {
-	if (p.p[i].x == s.x && p.p[i].y == s.y && p.p[i].z == s.z)
+	if (p->p[i].x == s->x && p->p[i].y == s->y && p->p[i].z == s->z)
 	    return i;
     }
     return -1;
@@ -191,7 +192,7 @@ int isIn(struct perm4 p, struct pos s) {
 // Return 0 on false
 // Return 1 on true
 
-int isYellow(struct perm4 p) {
+int isYellow(struct perm4 *p) {
     int pv = -1;
     int plane = isPlane(p, &pv);
     if (plane == 0)
@@ -208,20 +209,20 @@ int isYellow(struct perm4 p) {
 	    if (s.y - 1 >= 0) {
 		s.y = s.y - 1;
 		s.z = 0;
-		if (isIn(p, s) != -1)
+		if (isIn(p, &s) != -1)
 		    return 1;
 		s.z = 2;
-		if (isIn(p, s) != -1)
+		if (isIn(p, &s) != -1)
 		    return 1;
 	    }
 	    s.y = lv;
 	    if (s.y + 1 <= 2) {
 		s.y = s.y + 1;
 		s.z = 0;
-		if (isIn(p, s) != -1)
+		if (isIn(p, &s) != -1)
 		    return 1;
 		s.z = 2;
-		if (isIn(p, s) != -1)
+		if (isIn(p, &s) != -1)
 		    return 1;
 	    }
 	} else {
@@ -229,20 +230,20 @@ int isYellow(struct perm4 p) {
 	    if (s.z - 1 >= 0) {
 		s.z = s.z - 1;
 		s.y = 0;
-		if (isIn(p, s) != -1)
+		if (isIn(p, &s) != -1)
 		    return 1;
 		s.y = 2;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	    s.z = lv;
 	    if (s.z + 1 <= 2) {
 		s.z = s.z + 1;
 		s.y = 0;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 		s.y = 2;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	}
@@ -254,20 +255,20 @@ int isYellow(struct perm4 p) {
 	    if (s.x -1 >= 0) {
 		s.x = s.x - 1;
 		s.z = 0;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 		s.z = 2;
-		if (isIn(p, s) != -1)
+		if (isIn(p, &s) != -1)
 		    return 1;
 	    }
 	    s.x = lv;
 	    if (s.x + 1 <= 2) {
 		s.x = s.x + 1;
 		s.z = 0;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 		s.z = 2;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	} else {
@@ -275,20 +276,20 @@ int isYellow(struct perm4 p) {
 	    if (s.z - 1 >= 0) {
 		s.z = s.z - 1;
 		s.x = 0;
-		if (isIn(p,s) != -1)	
+		if (isIn(p,&s) != -1)	
 		    return 1;
 		s.x = 2;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	    s.z = lv;
 	    if (s.z + 1 <= 2) {
 		s.z = s.z + 1;
 		s.x = 0;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 		s.x = 2;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	}
@@ -300,20 +301,20 @@ int isYellow(struct perm4 p) {
 	    if (s.x - 1 >= 0) {
 		s.x = s.x - 1;
 		s.y = 0;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 		s.y = 2;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	    s.x = lv;
 	    if (s.x + 1 <= 2) {
 		s.x = s.x + 1;
 		s.y = 0;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 		s.y = 2;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	} else {
@@ -321,20 +322,20 @@ int isYellow(struct perm4 p) {
 	    if (s.y - 1 >= 0) {
 		s.y = s.y - 1;
 		s.x = 0;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 		s.x = 2;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	    s.y = lv;
 	    if (s.y + 1 <= 2) {
 		s.y = s.y + 1;
 		s.x = 0;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 		s.x = 2;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	}
@@ -343,7 +344,7 @@ int isYellow(struct perm4 p) {
     return 0;
 }
 
-int isGreen(struct perm4 p) {
+int isGreen(struct perm4 *p) {
     int pv = -1;
     int plane = isPlane(p, &pv);
     if (plane == 0)
@@ -360,14 +361,14 @@ int isGreen(struct perm4 p) {
 	    if (s.y - 1 >= 0) {
 		s.y = s.y - 1;
 		s.z = 1;
-		if (isIn(p, s) != -1)
+		if (isIn(p, &s) != -1)
 		    return 1;
 	    }
 	    s.y = lv;
 	    if (s.y + 1 <= 2) {
 		s.y = s.y + 1;
 		s.z = 1;
-		if (isIn(p, s) != -1)
+		if (isIn(p, &s) != -1)
 		    return 1;
 	    }
 	} else {
@@ -375,14 +376,14 @@ int isGreen(struct perm4 p) {
 	    if (s.z - 1 >= 0) {
 		s.z = s.z - 1;
 		s.y = 1;
-		if (isIn(p, s) != -1)
+		if (isIn(p, &s) != -1)
 		    return 1;
 	    }
 	    s.z = lv;
 	    if (s.z + 1 <= 2) {
 		s.z = s.z + 1;
 		s.y = 1;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	}
@@ -394,14 +395,14 @@ int isGreen(struct perm4 p) {
 	    if (s.x -1 >= 0) {
 		s.x = s.x - 1;
 		s.z = 1;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	    s.x = lv;
 	    if (s.x + 1 <= 2) {
 		s.x = s.x + 1;
 		s.z = 1;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	} else {
@@ -409,14 +410,14 @@ int isGreen(struct perm4 p) {
 	    if (s.z - 1 >= 0) {
 		s.z = s.z - 1;
 		s.x = 1;
-		if (isIn(p,s) != -1)	
+		if (isIn(p,&s) != -1)	
 		    return 1;
 	    }
 	    s.z = lv;
 	    if (s.z + 1 <= 2) {
 		s.z = s.z + 1;
 		s.x = 1;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	}
@@ -428,14 +429,14 @@ int isGreen(struct perm4 p) {
 	    if (s.x - 1 >= 0) {
 		s.x = s.x - 1;
 		s.y = 1;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	    s.x = lv;
 	    if (s.x + 1 <= 2) {
 		s.x = s.x + 1;
 		s.y = 1;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	} else {
@@ -443,14 +444,14 @@ int isGreen(struct perm4 p) {
 	    if (s.y - 1 >= 0) {
 		s.y = s.y - 1;
 		s.x = 1;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	    s.y = lv;
 	    if (s.y + 1 <= 2) {
 		s.y = s.y + 1;
 		s.x = 1;
-		if (isIn(p,s) != -1)
+		if (isIn(p,&s) != -1)
 		    return 1;
 	    }
 	}
@@ -460,7 +461,7 @@ int isGreen(struct perm4 p) {
 
 }
 
-int isOrange(struct perm4 p) {
+int isOrange(struct perm4 *p) {
     int v;
     int plane = isPlane(p, &v);
     if (plane == 0)
@@ -468,24 +469,24 @@ int isOrange(struct perm4 p) {
     return is22Line(p, plane);
 }
 
-int isBlack(struct perm4 p) {
+int isBlack(struct perm4 *p) {
     struct pos s;
     for (int i = 0; i < 4; i++) {
 	for (int j = 0; j < 8; j++) {
-	    s.x = 2*(j % 2) - 1 + p.p[i].x;
-	    s.y = p.p[i].y;
-	    s.z = p.p[i].z;
-	    if (s.x < 0 || s.x > 2 || isIn(p,s) == -1)
+	    s.x = 2*(j % 2) - 1 + p->p[i].x;
+	    s.y = p->p[i].y;
+	    s.z = p->p[i].z;
+	    if (s.x < 0 || s.x > 2 || isIn(p,&s) == -1)
 		continue;
-	    s.x = p.p[i].x;
-	    s.y = 2*(j/2 % 2) - 1 + p.p[i].y;
-	    s.z = p.p[i].z;
-	    if (s.y < 0 || s.y > 2 || isIn(p,s) == -1)
+	    s.x = p->p[i].x;
+	    s.y = 2*(j/2 % 2) - 1 + p->p[i].y;
+	    s.z = p->p[i].z;
+	    if (s.y < 0 || s.y > 2 || isIn(p,&s) == -1)
 		continue;
-	    s.x = p.p[i].x;
-	    s.y = p.p[i].y;
-	    s.z =2*(j/4 % 2) - 1 + p.p[i].z;
-	    if (s.z < 0 || s.z > 2 || isIn(p,s) == -1)
+	    s.x = p->p[i].x;
+	    s.y = p->p[i].y;
+	    s.z =2*(j/4 % 2) - 1 + p->p[i].z;
+	    if (s.z < 0 || s.z > 2 || isIn(p,&s) == -1)
 		continue;
 	    return 1;
 	}
@@ -493,30 +494,30 @@ int isBlack(struct perm4 p) {
     return 0;
 }
 
-int isBrown(struct perm4 p) {
+int isBrown(struct perm4 *p) {
     struct pos s;
     for (int i = 0; i < 3; i++) {
 	for (int j = 0; j < 8; j++) {
 	    for (int k = 0; k < 3; k++) {
 		if (k != 0) {
-		    s.x = 2*(j%2) -1 + p.p[i].x;
-		    s.y = p.p[i].y;
-		    s.z = p.p[i].z;
-		    if (s.x < 0 || s.x > 2 || isIn(p,s) == -1)
+		    s.x = 2*(j%2) -1 + p->p[i].x;
+		    s.y = p->p[i].y;
+		    s.z = p->p[i].z;
+		    if (s.x < 0 || s.x > 2 || isIn(p,&s) == -1)
 			continue;
 		}
 		if (k != 1) {
-		    s.x = p.p[i].x;
-		    s.y = 2*(j/2 %2) - 1 + p.p[i].y;
-		    s.z = p.p[i].z;
-		    if (s.y < 0 || s.y > 2 || isIn(p,s) == -1)
+		    s.x = p->p[i].x;
+		    s.y = 2*(j/2 %2) - 1 + p->p[i].y;
+		    s.z = p->p[i].z;
+		    if (s.y < 0 || s.y > 2 || isIn(p,&s) == -1)
 			continue;
 		}
 		if (k != 2) {
-		    s.x = p.p[i].x;
-		    s.y = p.p[i].y;
-		    s.z = 2*(j/4 %2) - 1 + p.p[i].z;
-		    if (s.z < 0 || s.z > 2 || isIn(p,s) == -1)
+		    s.x = p->p[i].x;
+		    s.y = p->p[i].y;
+		    s.z = 2*(j/4 %2) - 1 + p->p[i].z;
+		    if (s.z < 0 || s.z > 2 || isIn(p,&s) == -1)
 			continue;
 		}
 		return 1;
@@ -529,51 +530,51 @@ int isBrown(struct perm4 p) {
 // Returns -1 if not blue or red
 // Returns 0 if blue
 // Returns 1 if red
-int rotParity(struct perm4 p) {
+int rotParity(struct perm4 *p) {
     struct pos s;
     int parity = 0;
     for (int i = 0; i < 4; i++) {
 	for (int j = 0; j < 8; j++) {
 	    for (int k = 0; k < 3; k++) {
-		s.x = p.p[i].x;
-		s.y = p.p[i].y;
-		s.z = p.p[i].z;
+		s.x = p->p[i].x;
+		s.y = p->p[i].y;
+		s.z = p->p[i].z;
 		parity = (j % 2) + (j / 2 % 2) + (j / 4 % 2);
 		if (k == 0) {
 		    s.x += 1 - 2 * (j % 2);
-		    if (s.x < 0 || s.x > 2 || isIn(p,s) == -1)
+		    if (s.x < 0 || s.x > 2 || isIn(p,&s) == -1)
 			continue;
 		    s.y += 1 - 2 * (j /2 % 2);
-		    if (s.y < 0 || s.y > 2 || isIn(p,s) == -1)
+		    if (s.y < 0 || s.y > 2 || isIn(p,&s) == -1)
 			continue;
 		    s.z += 1 - 2 * (j / 4 % 2);
-		    if (s.z < 0 || s.z > 2 || isIn(p,s) == -1)
+		    if (s.z < 0 || s.z > 2 || isIn(p,&s) == -1)
 			continue;
 		    return parity % 2;
 		}
 		parity++;
 		if (k == 1) {
 		    s.x += 1 - 2 * (j % 2);
-		    if (s.x < 0 || s.x > 2 || isIn(p,s) == -1)
+		    if (s.x < 0 || s.x > 2 || isIn(p,&s) == -1)
 			continue;
 		    s.z += 1 - 2 * (j/4 % 2);
-		    if (s.z < 0 || s.z > 2 || isIn(p,s) == -1)
+		    if (s.z < 0 || s.z > 2 || isIn(p,&s) == -1)
 			continue;
 		    s.y += 1 - 2 * (j/2 % 2);
-		    if (s.y < 0 || s.y > 2 || isIn(p,s) == -1)
+		    if (s.y < 0 || s.y > 2 || isIn(p,&s) == -1)
 			continue;
 		    return parity % 2;
 		}
 		
 		if (k == 2) {
 		    s.y += 1 - 2 * (j / 2 % 2);
-		    if (s.y < 0 || s.y > 2 || isIn(p,s) == -1)
+		    if (s.y < 0 || s.y > 2 || isIn(p,&s) == -1)
 			continue;
 		    s.x += 1 - 2 * (j % 2);
-		    if (s.x < 0 || s.x > 2 || isIn(p,s) == -1)
+		    if (s.x < 0 || s.x > 2 || isIn(p,&s) == -1)
 			continue;
 		    s.z += 1 - 2 * (j / 4 % 2);
-		    if (s.z < 0 || s.z > 2 || isIn(p,s) == -1)
+		    if (s.z < 0 || s.z > 2 || isIn(p,&s) == -1)
 			continue;
 		    return parity % 2;
 		}
@@ -583,15 +584,15 @@ int rotParity(struct perm4 p) {
     return -1;
 }
 
-int isBlue(struct perm4 p) {
+int isBlue(struct perm4 *p) {
     return rotParity(p) == 0;
 }
 
-int isRed(struct perm4 p) {
+int isRed(struct perm4 *p) {
     return rotParity(p) == 1;
 }
 
-int isShape(struct perm4 p, int shape) {
+int isShape(struct perm4 *p, int shape) {
     if (shape == 0)
 	return isYellow(p);
     if (shape == 1)
@@ -661,7 +662,7 @@ void run() {
 	    for (; codeIndex < 70; codeIndex++) {
 		kcode = codes[codeIndex];
 		assignCode(permCode, kcode, &p1, &p2);
-		if (isShape(p1, shape1) && isShape(p2, shape2))
+		if (isShape(&p1, shape1) && isShape(&p2, shape2))
 		    count++;
 	    }
 	    if (count >= 3) {
@@ -707,7 +708,7 @@ void runBrown() {
 		if (validPC != 3)
 		    continue;
 		assignCodeBrown(permCode, kcode, &p1, &pB);
-		if (isShape(p1, shape) && isBrown(pB))
+		if (isShape(&p1, shape) && isBrown(&pB))
 		    count++;
 	    }
 	    if (count >= 3) {
@@ -720,10 +721,18 @@ void runBrown() {
 
 
 int main(int argc, char** argv) {
-    calcCodes();	
+    calcCodes();
+    struct timeval startt, stopt;
+    gettimeofday(&startt, NULL);
     run();
+    gettimeofday(&stopt, NULL);
+    printf("s (w/o Brown): %ld\n", stopt.tv_sec - startt.tv_sec);
+    gettimeofday(&startt, NULL);
     runBrown();
+    gettimeofday(&stopt, NULL);
+    printf("s (w/ Brown): %ld\n", stopt.tv_sec - startt.tv_sec);
     return 0;
+    /*
     struct perm4 p;
     p.p[0].x = 0;
     p.p[0].y = 0;
@@ -755,4 +764,5 @@ int main(int argc, char** argv) {
 	printf("red\n");
     if (isBrown(p))
 	printf("brown\n");
+	*/
 }
