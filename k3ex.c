@@ -3,6 +3,8 @@
 
 int codes[70];
 
+int bcodes[35];
+
 int shapes[15] = {3, 5, 6, 9, 10, 12, 17, 18, 20, 24, 33, 34, 36, 40, 48};
 
 struct pos {
@@ -16,9 +18,71 @@ struct perm {
 };
 
 struct perm4 { 
-    int posCode;
+    int permCode;
+    int diff;
     struct pos p[4];
 };
+
+int graph[27][7];
+
+void calcGraph() {
+    int j;
+    for (int i = 0; i < 27; i++) {
+	j = 0;
+	if (i % 3 != 0) {
+	    graph[i][j] = i - 1;
+	    j++;
+	}
+	if (i % 3 != 2) {
+	    graph[i][j] = i + 1;
+	    j++;
+	}
+	if (i / 3 % 3 != 0) {
+	    graph[i][j] = i - 3;
+	    j++;
+	}
+	if (i / 3 % 3 != 2) {
+	    graph[i][j] = i + 3;
+	    j++;
+	}
+	if (i / 9 % 3 != 0) {
+	    graph[i][j] = i - 9;
+	    j++;
+	}
+	if (i / 9 % 3 != 2) {
+	    graph[i][j] = i + 9;
+	    j++;
+	}
+	graph[i][j] = -1;
+    }
+}
+
+int connected(int permcode, int size) {
+    int has[27];
+    int found[27]; // size
+    int j = 0;
+    for (int i = 0; i < 27; i++) {
+	has[i] = permcode % 2;
+	if (permcode % 2 == 1 && j == 0) {
+	    found[j] = i;
+	    has[i] = 0;
+	    j++;
+	}
+	permcode /= 2;
+    }
+    for (int i = 0; i < j; i++) {
+	for (int k = 0; graph[found[i]][k] != -1; k++) {
+	    if (has[graph[found[i]][k]]) {
+		has[graph[found[i]][k]] = 0;
+		found[j] = graph[found[i]][k];
+		j++;
+	    }
+	    if (j > size - 1)
+		return 1;
+	}
+    }
+    return 0;
+}
 
 
 void calcCodes() {
@@ -29,55 +93,84 @@ void calcCodes() {
 	   i++;
 	}
     }
+    i = 0;
+    for (int code = 0; code < 128; code++) {
+	if ( (code %2) + (code/2 % 2) + (code/4 % 2) + (code/8 % 2) + (code/16 %2) + (code/32 %2) + (code/64 %2) == 3) {
+	    bcodes[i] = code;
+	    i++;
+	}
+    }
 }
 
+
+
 int assignCode(int permCode, int kcode, struct perm4 *p1, struct perm4 *p2) {
+    p1->diff = 0;
+    p2->diff = 0;
+    p1->permCode = 0;
+    p2->permCode = 0;
     int i1 = 0;
     int i2 = 0;
     for (int i = 0; i < 27; i++) {
 	if (permCode % 2) {
 	    if (kcode % 2) {
-		p2->posCode = i;
+		p2->permCode += 1 << i;
 		p2->p[i2].x = i % 3;
 		p2->p[i2].y = i / 3 % 3;
 		p2->p[i2].z = i / 9 % 3;
+		p2->diff += 2*((i % 3 + i / 3 % 3 + i / 9 % 3) % 2) - 1;
 		i2++;
 	    } else {
-		p1->posCode = i;
+		p1->permCode += 1 << i;
 		p1->p[i1].x = i % 3;
 		p1->p[i1].y = i / 3 % 3;
 		p1->p[i1].z = i / 9 % 3;
+		p1->diff += 2*((i % 3 + i / 3 % 3 + i / 9 % 3) % 2) - 1;
 		i1++;
 	    }
 	    kcode /= 2;
 	}
 	permCode /= 2;
     }
+    if (p1->diff < 0)
+	p1->diff *= -1;
+    if (p2->diff < 0)
+	p2->diff *= -1;
     return !((i1 == 4) && (i2 == 4));
 }
 
 int assignCodeBrown(int permCode, int kcode, struct perm4 *p1, struct perm4 *pB) {
     int i1 = 0;
     int i2 = 0;
+    p1->diff = 0;
+    pB->diff = 0;
+    p1->permCode = 0;
+    pB->permCode = 0;
     for (int i = 0; i < 27; i++) {
 	if (permCode % 2) {
 	    if (kcode % 2) {
-		pB->posCode = i;
+		pB->permCode += 1 << i;
 		pB->p[i2].x = i % 3;
 		pB->p[i2].y = i / 3 % 3;
 		pB->p[i2].z = i / 9 % 3;
+		pB->diff += 2*((i % 3 + i / 3 % 3 + i / 9 % 3) % 2) - 1;
 		i2++;
 	    } else {
-		p1->posCode = i;
+		p1->permCode += 1 << i;
 		p1->p[i1].x = i % 3;
 		p1->p[i1].y = i / 3 % 3;
 		p1->p[i1].z = i / 9 % 3;
+		p1->diff += 2*((i % 3 + i / 3 % 3 + i / 9 % 3) % 2) - 1;
 		i1++;
 	    }
 	    kcode /= 2;
 	}
 	permCode /= 2;
     }
+    if (p1->diff < 0)
+	p1->diff *= -1;
+    if (pB->diff < 0)
+	pB->diff *= -1;
     pB->p[3].x = pB->p[0].x;
     pB->p[3].y = pB->p[0].y;
     pB->p[3].z = pB->p[0].z;
@@ -193,6 +286,8 @@ int isIn(struct perm4 *p, struct pos *s) {
 // Return 1 on true
 
 int isYellow(struct perm4 *p) {
+    if (p->diff != 0)
+	return 0;
     int pv = -1;
     int plane = isPlane(p, &pv);
     if (plane == 0)
@@ -345,6 +440,8 @@ int isYellow(struct perm4 *p) {
 }
 
 int isGreen(struct perm4 *p) {
+    if (p->diff != 2)
+	return 0;
     int pv = -1;
     int plane = isPlane(p, &pv);
     if (plane == 0)
@@ -462,6 +559,8 @@ int isGreen(struct perm4 *p) {
 }
 
 int isOrange(struct perm4 *p) {
+    if (p->diff != 0)
+	return 0;
     int v;
     int plane = isPlane(p, &v);
     if (plane == 0)
@@ -470,6 +569,8 @@ int isOrange(struct perm4 *p) {
 }
 
 int isBlack(struct perm4 *p) {
+    if (p->diff != 2)
+	return 0;
     struct pos s;
     for (int i = 0; i < 4; i++) {
 	for (int j = 0; j < 8; j++) {
@@ -495,6 +596,8 @@ int isBlack(struct perm4 *p) {
 }
 
 int isBrown(struct perm4 *p) {
+    if (p->diff != 1)
+	return 0;
     struct pos s;
     for (int i = 0; i < 3; i++) {
 	for (int j = 0; j < 8; j++) {
@@ -531,6 +634,8 @@ int isBrown(struct perm4 *p) {
 // Returns 0 if blue
 // Returns 1 if red
 int rotParity(struct perm4 *p) {
+    if (p->diff != 0)
+	return -1;
     struct pos s;
     int parity = 0;
     for (int i = 0; i < 4; i++) {
@@ -593,6 +698,8 @@ int isRed(struct perm4 *p) {
 }
 
 int isShape(struct perm4 *p, int shape) {
+    if (!connected(p->permCode, 4))
+	return 0;
     if (shape == 0)
 	return isYellow(p);
     if (shape == 1)
@@ -608,7 +715,29 @@ int isShape(struct perm4 *p, int shape) {
 }
 
 
-
+void runConnected() {
+    int numConnected = 0;
+    int numSubGraphs = 0;
+    int validPC;
+    int div;
+    int testSize = 12;
+    for (int permCode = 0; permCode < 134217728; permCode++) {
+	validPC = 0;
+	div = 1;
+	for (int i = 0; i < 27; i++) {
+	    validPC += permCode / div % 2;
+	    div *= 2;
+	}
+	if (validPC != testSize)
+	    continue;
+	numSubGraphs++;
+	if (connected(permCode, testSize)) {
+	    numConnected++;
+	}
+    }
+    printf("Number of Subgraphs: %d\n", numSubGraphs);
+    printf("Number connected: %d\n", numConnected);
+}
 
 
 
@@ -628,7 +757,7 @@ void run() {
     //int notValid = 0;
     for (int permCode = 0; permCode < 134217728; permCode++) {
 	if (permCode % 1048576 == 0)
-	    printf("%F%% of the way there\n", 100 * (permCode / 134217728.0));
+	    //printf("%F%% of the way there\n", 100 * (permCode / 134217728.0));
 	validPC = 0;
 	div = 1;
 	codeIndex = 0;
@@ -638,6 +767,8 @@ void run() {
 	    div *= 2;
 	}
 	if (validPC != 8)
+	    continue;
+	if (!connected(permCode, 8))
 	    continue;
 	for (; shapeI < 15; shapeI++) {
 	    count = 0;
@@ -679,6 +810,7 @@ void runBrown() {
     struct perm4 p1;
     struct perm4 pB;
     int kcode;
+    int cind;
     int shape;
     int count;
     int index = 0;
@@ -686,7 +818,7 @@ void runBrown() {
     
     for (int permCode = 0; permCode < 134217728; permCode++) {
 	if (permCode % 1048576 == 0)
-	    printf("%F%% of the way there\n", 100 * (permCode / 134217728.0));
+	    //printf("%F%% of the way there\n", 100 * (permCode / 134217728.0));
 	validPC = 0;
 	div = 1;
 	shape = 0;
@@ -696,18 +828,15 @@ void runBrown() {
 	}
 	if (validPC != 7)
 	    continue;
+	if (!connected(permCode, 7))
+	    continue;
 	for (; shape < 6; shape++) {
 	    count = 0;
-	    for (kcode = 0; kcode < 128; kcode++) {
-		validPC = 0;
-		div = 1;
-		for (i = 0; i < 7; i++) {
-		    validPC += kcode / div % 2;
-		    div *= 2;
-		}
-		if (validPC != 3)
-		    continue;
+	    for (cind = 0; cind < 35; cind++) {
+		kcode = bcodes[cind];
 		assignCodeBrown(permCode, kcode, &p1, &pB);
+		if (!connected(pB.permCode, 3))
+		    continue;
 		if (isShape(&p1, shape) && isBrown(&pB))
 		    count++;
 	    }
@@ -721,6 +850,9 @@ void runBrown() {
 
 
 int main(int argc, char** argv) {
+    calcGraph();
+    //runConnected();
+    //return 0;
     calcCodes();
     struct timeval startt, stopt;
     gettimeofday(&startt, NULL);
