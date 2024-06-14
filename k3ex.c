@@ -598,6 +598,8 @@ int isBlack(struct perm4 *p) {
 int isBrown(struct perm4 *p) {
     if (p->diff != 1)
 	return 0;
+    if (!connected(p->permCode, 3))
+	return 0;
     struct pos s;
     for (int i = 0; i < 3; i++) {
 	for (int j = 0; j < 8; j++) {
@@ -720,7 +722,7 @@ void runConnected() {
     int numSubGraphs = 0;
     int validPC;
     int div;
-    int testSize = 12;
+    int testSize = 3;
     for (int permCode = 0; permCode < 134217728; permCode++) {
 	validPC = 0;
 	div = 1;
@@ -756,7 +758,7 @@ void run() {
     int count;
     //int notValid = 0;
     for (int permCode = 0; permCode < 134217728; permCode++) {
-	if (permCode % 1048576 == 0)
+	//if (permCode % 1048576 == 0)
 	    //printf("%F%% of the way there\n", 100 * (permCode / 134217728.0));
 	validPC = 0;
 	div = 1;
@@ -817,7 +819,7 @@ void runBrown() {
 
     
     for (int permCode = 0; permCode < 134217728; permCode++) {
-	if (permCode % 1048576 == 0)
+	//if (permCode % 1048576 == 0)
 	    //printf("%F%% of the way there\n", 100 * (permCode / 134217728.0));
 	validPC = 0;
 	div = 1;
@@ -835,17 +837,16 @@ void runBrown() {
 	    for (cind = 0; cind < 35; cind++) {
 		kcode = bcodes[cind];
 		assignCodeBrown(permCode, kcode, &p1, &pB);
-		if (!connected(pB.permCode, 3))
-		    continue;
 		if (isShape(&p1, shape) && isBrown(&pB))
 		    count++;
 	    }
 	    if (count >= 3) {
 		index++;
-		printf("(%d) K%d found, (not brown) shape: %d, permCode: %d\n", index, count, shape, permCode);
+		//printf("(%d) K%d found, (not brown) shape: %d, permCode: %d\n", index, count, shape, permCode);
 	    }
 	}
     }
+    printf("K3's found: %d\n", index);
 }
 
 
