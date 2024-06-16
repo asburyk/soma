@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <sys/time.h>
+#include <pthread.h>
 
 int codes[70];
 
@@ -11,7 +12,7 @@ int mem[1 << 27];
 
 int shapes[15] = {3, 5, 6, 9, 10, 12, 17, 18, 20, 24, 33, 34, 36, 40, 48};
 
-int shapes3[20] = {8, 9, 10, 11, 15, 16, 17, 22, 23, 29, 51, 52, 52, 58, 59, 65, 94, 95, 101, 137};
+int shapes3[20] = {8, 9, 10, 11, 15, 16, 17, 22, 23, 29, 51, 52, 53, 58, 59, 65, 94, 95, 101, 137};
 
 struct pos {
     int x;
@@ -121,10 +122,10 @@ void calcCodes() {
     int div;
     for (int code = 0; code < 531441; code++) {
 	arr[0] = 0;
-	arr[1] = 1;
-	arr[2] = 2;
+	arr[1] = 0;
+	arr[2] = 0;
 	div = 1;
-	for (int j = 0; j++; j < 12) {
+	for (int j = 0; j < 12; j++) {
 	    arr[code / div % 3] += 1;
 	    div *= 3;
 	}
@@ -133,8 +134,17 @@ void calcCodes() {
 	    i++;
 	}
     }
+    int count = 0;
     for (int z = 0; z < 1 << 27; z++) {
+	count = 0;
+	for (int i = 0; i < 27; i++) {
+	    if (z / (1 << i) % 2 == 1)
+		count++;
+	}
+	if (count != 4)
+	    continue;
 	mem[z] = 0;
+	connected(z, 4);
     }
 }
 
@@ -215,6 +225,12 @@ int assignCode3(int permCode, int kcode, struct perm4 *p1, struct perm4 *p2, str
 	}
 	permCode /= 2;
     }
+    if (p1->diff < 0)
+	p1->diff *= -1;
+    if (p2->diff < 0)
+	p2->diff *= -1;
+    if (p3->diff < 0)
+	p3->diff *= -1;
 }
 
 int assignCodeBrown(int permCode, int kcode, struct perm4 *p1, struct perm4 *pB) {
@@ -934,11 +950,133 @@ void run3() {
 	    }
 	}
 
-	for (; shapeI < 20; shapeI++) {
+	for (shapeI = 0; shapeI < 20; shapeI++) {
 	    if (count[shapeI] >= 3) {
 		printf("K%d found, shapeCodeIndex: %d, permCode: %d\n", count[shapeI], shapeI, permCode);
 	    }
 	}
+    }
+}
+
+
+
+/*void* Trun3(void *arg) {
+    int validPC;
+    int div;
+    int codeIndex;
+    int i;
+    struct perm4 p1;
+    struct perm4 p2;
+    struct perm4 p3;
+    int kcode;
+    int shapeI = *( (int *) arg);
+    int shapeCode = shapes3[shapeI];
+    int shape1 = shapeCode / 36 % 6;
+    int shape2 = shapeCode / 6 % 6;
+    int shape3 = shapeCode % 6;
+    int count = 0;
+    int present = 0;
+    //int notValid = 0;
+    for (int permCode = 0; permCode < 134217728; permCode++) {
+	if (permCode % 65536 == 0 && shapeI == 0)
+	    printf("Thread %d: %F%% of the way there\n", shapeI, 100 * (permCode / 134217728.0));
+	validPC = 0;
+	div = 1;
+	for (i = 0; i < 27; i++) {
+	    validPC += permCode / div % 2;
+	    div *= 2;
+	}
+	if (validPC != 12)
+	    continue;
+	if (!connected(permCode, 12))
+	    continue;
+	count = 0;
+	for (codeIndex = 0; codeIndex < 34650; codeIndex++) {
+	    kcode = codes3[codeIndex];
+	    assignCode3(permCode, kcode, &p1, &p2, &p3);
+	    if (!connected(p1.permCode, 4) || !connected(p2.permCode, 4) || !connected(p3.permCode, 4)) {
+		continue;
+	    }
+	    if (isShape(&p1, shape1) && isShape(&p2, shape2) && isShape(&p3, shape3)) {
+		count++;
+		present++;
+	    }
+	}
+	if (count >= 3) {
+	    printf("K%d found, shapeCodeIndex: %d, permCode: %d\n", count, shapeI, permCode);
+	}
+    }
+    printf("shapeCodeIndex: %d, number of 3-swaps: %d\n", shapeI, present);
+    return NULL;
+}*/
+
+void* Trun3(void* arg) {
+    int validPC;
+    int div;
+    int codeIndex;
+    int i;
+    struct perm4 p1;
+    struct perm4 p2;
+    struct perm4 p3;
+    int kcode;
+    int shapeI;
+    int shapeCode;
+    int shape1;
+    int shape2;
+    int shape3;
+    int count[20];
+    int present[20];
+    int start = *((int *) arg);
+    for (shapeI = 0; shapeI < 20; shapeI++) {
+	present[shapeI] = 0;
+    }
+    //int notValid = 0;
+    for (int permCode = start; permCode < 134217728; permCode += 16) {
+	if (permCode % (1 << 20) == start)
+	    printf("Thread %d: %F%% of the way there\n", start, 100 * (permCode / 134217728.0));
+	validPC = 0;
+	div = 1;
+	for (i = 0; i < 27; i++) {
+	    validPC += permCode / div % 2;
+	    div *= 2;
+	}
+	if (validPC != 12)
+	    continue;
+	if (!connected(permCode, 12))
+	    continue;
+	for (shapeI = 0; shapeI < 20; shapeI++) {
+	    count[shapeI] = 0;
+	}
+	for (codeIndex = 0; codeIndex < 34650; codeIndex++) {
+	    kcode = codes3[codeIndex];
+	    assignCode3(permCode, kcode, &p1, &p2, &p3);
+	    if (!connected(p1.permCode, 4) || !connected(p2.permCode, 4) || !connected(p3.permCode, 4)) {
+		continue;
+	    }
+	    for (shapeI = 0; shapeI < 20; shapeI++) {
+		shapeCode = shapes3[shapeI];
+		shape3 = shapeCode % 6;
+		shape2 = shapeCode / 6 % 6;
+		shape1 = shapeCode / 36 % 6;
+		if (isShape(&p1, shape1) && isShape(&p2, shape2) && isShape(&p3, shape3)) {
+		    count[shapeI]++;
+		}
+	    }
+	}
+
+	for (shapeI = 0; shapeI < 20; shapeI++) {
+	    if (count[shapeI] >= 2) {
+		present[shapeI] = 1;
+	    }
+	    if (count[shapeI] >= 3) {
+		printf("\nK%d found, shapeCodeIndex: %d, permCode: %d\n\n", count[shapeI], shapeI, permCode);
+	    }
+	}
+    }
+    printf("\nThread %d Done\n\n", start);
+    for (shapeI = 0; shapeI < 20; shapeI++) {
+	if (present[shapeI] == 0)
+	    printf("\nThread %d: Found no shapeI %d\n\n", start, shapeI);
     }
 }
 
@@ -993,9 +1131,21 @@ int main(int argc, char** argv) {
     //return 0;
     calcCodes();
     struct timeval startt, stopt;
+    pthread_t threads[16];
+    int arg[16];
+    for (int i = 0; i < 16; i++) {
+	arg[i] = i;
+    }
+    printf("starting\n");
     gettimeofday(&startt, NULL);
     //run();
-    run3();
+    for (int i = 0; i < 16; i++) {
+	pthread_create(&threads[i], NULL, Trun3, &arg[i]);
+    }
+    for (int i = 0; i < 16; i++) {
+	pthread_join(threads[i], NULL);
+    }
+    //run3();
     gettimeofday(&stopt, NULL);
     printf("s (w/o Brown): %ld\n", stopt.tv_sec - startt.tv_sec);
     return 0;
