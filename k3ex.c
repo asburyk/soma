@@ -7,6 +7,8 @@ int bcodes[35];
 
 int codes3[34650];
 
+int mem[1 << 27];
+
 int shapes[15] = {3, 5, 6, 9, 10, 12, 17, 18, 20, 24, 33, 34, 36, 40, 48};
 
 int shapes3[20] = {8, 9, 10, 11, 15, 16, 17, 22, 23, 29, 51, 52, 52, 58, 59, 65, 94, 95, 101, 137};
@@ -62,6 +64,10 @@ void calcGraph() {
 }
 
 int connected(int permcode, int size) {
+    int opc = permcode;
+    if (size == 4 && mem[opc] != 0) {
+	return mem[opc] == 1;
+    }
     int has[27];
     int found[27]; // size
     int j = 0;
@@ -81,9 +87,15 @@ int connected(int permcode, int size) {
 		found[j] = graph[found[i]][k];
 		j++;
 	    }
-	    if (j > size - 1)
+	    if (j > size - 1) {
+		if (size == 4)
+		    mem[opc] = 1;
 		return 1;
+	    }
 	}
+    }
+    if (size == 4) {
+	mem[opc] = -1;
     }
     return 0;
 }
@@ -120,6 +132,9 @@ void calcCodes() {
 	    codes3[i] = code;
 	    i++;
 	}
+    }
+    for (int z = 0; z < 1 << 27; z++) {
+	mem[z] = 0;
     }
 }
 
@@ -762,8 +777,8 @@ int isRed(struct perm4 *p) {
 }
 
 int isShape(struct perm4 *p, int shape) {
-    if (!connected(p->permCode, 4))
-	return 0;
+    //if (!connected(p->permCode, 4))
+//	return 0;
     if (shape == 0)
 	return isYellow(p);
     if (shape == 1)
@@ -854,7 +869,7 @@ void run() {
 		}
 		shapeCode /= 2;
 	    }
-	    for (; codeIndex < 70; codeIndex++) {
+	    for (codeIndex = 0; codeIndex < 70; codeIndex++) {
 		kcode = codes[codeIndex];
 		assignCode(permCode, kcode, &p1, &p2);
 		if (isShape(&p1, shape1) && isShape(&p2, shape2))
@@ -881,15 +896,17 @@ void run3() {
     int shape1;
     int shape2;
     int shape3;
-    int count;
+    int count[20];
+    int present[20];
+    for (shapeI = 0; shapeI < 20; shapeI++) {
+	present[shapeI] = 0;
+    }
     //int notValid = 0;
     for (int permCode = 0; permCode < 134217728; permCode++) {
 	if (permCode % 131072 == 0)
 	    printf("%F%% of the way there\n", 100 * (permCode / 134217728.0));
 	validPC = 0;
 	div = 1;
-	codeIndex = 0;
-	shapeI = 0;
 	for (i = 0; i < 27; i++) {
 	    validPC += permCode / div % 2;
 	    div *= 2;
@@ -898,21 +915,28 @@ void run3() {
 	    continue;
 	if (!connected(permCode, 12))
 	    continue;
-	for (; shapeI < 20; shapeI++) {
-	    count = 0;
-	    //printf("shape combo %d\n", shapeI);
-	    shapeCode = shapes3[shapeI];
-	    shape3 = shapeCode % 6;
-	    shape2 = shapeCode / 6 % 6;
-	    shape1 = shapeCode / 36 % 6;
-	    for (; codeIndex < 34650; codeIndex++) {
-		kcode = codes3[codeIndex];
-		assignCode3(permCode, kcode, &p1, &p2, &p3);
-		if (isShape(&p1, shape1) && isShape(&p2, shape2) && isShape(&p3, shape3))
-		    count++;
+	for (shapeI = 0; shapeI < 20; shapeI++) {
+	    count[shapeI] = 0;
+	}
+	for (codeIndex = 0; codeIndex < 34650; codeIndex++) {
+	    kcode = codes3[codeIndex];
+	    assignCode3(permCode, kcode, &p1, &p2, &p3);
+	    if (!connected(p1.permCode, 4) || !connected(p2.permCode, 4) || !connected(p3.permCode, 4)) {
+		continue;
 	    }
-	    if (count >= 3) {
-		printf("K3 found, shapeCodeIndex: %d, permCode: %d\n", shapeI, permCode);
+	    for (shapeI = 0; shapeI < 20; shapeI++) {
+		shapeCode = shapes3[shapeI];
+		shape3 = shapeCode % 6;
+		shape2 = shapeCode / 6 % 6;
+		shape1 = shapeCode / 36 % 6;
+		if (isShape(&p1, shape1) && isShape(&p2, shape2) && isShape(&p3, shape3))
+		    count[shapeI]++;
+	    }
+	}
+
+	for (; shapeI < 20; shapeI++) {
+	    if (count[shapeI] >= 3) {
+		printf("K%d found, shapeCodeIndex: %d, permCode: %d\n", count[shapeI], shapeI, permCode);
 	    }
 	}
     }
