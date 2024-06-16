@@ -5,7 +5,11 @@ int codes[70];
 
 int bcodes[35];
 
+int codes3[34650];
+
 int shapes[15] = {3, 5, 6, 9, 10, 12, 17, 18, 20, 24, 33, 34, 36, 40, 48};
+
+int shapes3[20] = {8, 9, 10, 11, 15, 16, 17, 22, 23, 29, 51, 52, 52, 58, 59, 65, 94, 95, 101, 137};
 
 struct pos {
     int x;
@@ -100,6 +104,23 @@ void calcCodes() {
 	    i++;
 	}
     }
+    i = 0;
+    int arr[3];
+    int div;
+    for (int code = 0; code < 531441; code++) {
+	arr[0] = 0;
+	arr[1] = 1;
+	arr[2] = 2;
+	div = 1;
+	for (int j = 0; j++; j < 12) {
+	    arr[code / div % 3] += 1;
+	    div *= 3;
+	}
+	if (arr[0] == 4 && arr[1] == 4 && arr[2] == 4) {
+	    codes3[i] = code;
+	    i++;
+	}
+    }
 }
 
 
@@ -139,6 +160,48 @@ int assignCode(int permCode, int kcode, struct perm4 *p1, struct perm4 *p2) {
     return !((i1 == 4) && (i2 == 4));
 }
 
+int assignCode3(int permCode, int kcode, struct perm4 *p1, struct perm4 *p2, struct perm4 *p3) {
+    p1->diff = 0;
+    p2->diff = 0;
+    p3->diff = 0;
+    p1->permCode = 0;
+    p2->permCode = 0;
+    p3->permCode = 0;
+    int i1 = 0;
+    int i2 = 0;
+    int i3 = 0;
+    for (int i = 0; i < 27; i++) {
+	if (permCode % 2) {
+	    if (kcode % 3 == 2) {
+		p3->permCode += 1 << i;
+		p3->p[i3].x = i % 3;
+		p3->p[i3].y = i / 3 % 3;
+		p3->p[i3].z = i / 9 % 3;
+		p3->diff += 2*((i % 3 + i / 3 % 3 + i / 9 % 3) % 2) - 1;
+		i3++;
+	    }
+	    if (kcode % 3 == 1) {
+		p2->permCode += 1 << i;
+		p2->p[i2].x = i % 3;
+		p2->p[i2].y = i / 3 % 3;
+		p2->p[i2].z = i / 9 % 3;
+		p2->diff += 2*((i % 3 + i / 3 % 3 + i / 9 % 3) % 2) - 1;
+		i2++;
+	    }
+	    if (kcode % 3 == 0) {
+		p1->permCode += 1 << i;
+		p1->p[i1].x = i % 3;
+		p1->p[i1].y = i / 3 % 3;
+		p1->p[i1].z = i / 9 % 3;
+		p1->diff += 2*((i % 3 + i / 3 % 3 + i / 9 % 3) % 2) - 1;
+		i1++;
+	    }
+	    kcode /= 2;
+	}
+	permCode /= 2;
+    }
+}
+
 int assignCodeBrown(int permCode, int kcode, struct perm4 *p1, struct perm4 *pB) {
     int i1 = 0;
     int i2 = 0;
@@ -175,7 +238,6 @@ int assignCodeBrown(int permCode, int kcode, struct perm4 *p1, struct perm4 *pB)
     pB->p[3].y = pB->p[0].y;
     pB->p[3].z = pB->p[0].z;
     return (i2 == 3) && (i1 == 4);
-
 }
 
 // Returns 0 on false
@@ -805,6 +867,57 @@ void run() {
     }
 }
 
+void run3() {
+    int validPC;
+    int div;
+    int codeIndex;
+    int i;
+    struct perm4 p1;
+    struct perm4 p2;
+    struct perm4 p3;
+    int kcode;
+    int shapeI;
+    int shapeCode;
+    int shape1;
+    int shape2;
+    int shape3;
+    int count;
+    //int notValid = 0;
+    for (int permCode = 0; permCode < 134217728; permCode++) {
+	if (permCode % 131072 == 0)
+	    printf("%F%% of the way there\n", 100 * (permCode / 134217728.0));
+	validPC = 0;
+	div = 1;
+	codeIndex = 0;
+	shapeI = 0;
+	for (i = 0; i < 27; i++) {
+	    validPC += permCode / div % 2;
+	    div *= 2;
+	}
+	if (validPC != 12)
+	    continue;
+	if (!connected(permCode, 12))
+	    continue;
+	for (; shapeI < 20; shapeI++) {
+	    count = 0;
+	    //printf("shape combo %d\n", shapeI);
+	    shapeCode = shapes3[shapeI];
+	    shape3 = shapeCode % 6;
+	    shape2 = shapeCode / 6 % 6;
+	    shape1 = shapeCode / 36 % 6;
+	    for (; codeIndex < 34650; codeIndex++) {
+		kcode = codes3[codeIndex];
+		assignCode3(permCode, kcode, &p1, &p2, &p3);
+		if (isShape(&p1, shape1) && isShape(&p2, shape2) && isShape(&p3, shape3))
+		    count++;
+	    }
+	    if (count >= 3) {
+		printf("K3 found, shapeCodeIndex: %d, permCode: %d\n", shapeI, permCode);
+	    }
+	}
+    }
+}
+
 void runBrown() {
     int validPC;
     int div;
@@ -857,9 +970,11 @@ int main(int argc, char** argv) {
     calcCodes();
     struct timeval startt, stopt;
     gettimeofday(&startt, NULL);
-    run();
+    //run();
+    run3();
     gettimeofday(&stopt, NULL);
     printf("s (w/o Brown): %ld\n", stopt.tv_sec - startt.tv_sec);
+    return 0;
     gettimeofday(&startt, NULL);
     runBrown();
     gettimeofday(&stopt, NULL);
