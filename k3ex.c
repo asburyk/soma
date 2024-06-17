@@ -221,7 +221,7 @@ int assignCode3(int permCode, int kcode, struct perm4 *p1, struct perm4 *p2, str
 		p1->diff += 2*((i % 3 + i / 3 % 3 + i / 9 % 3) % 2) - 1;
 		i1++;
 	    }
-	    kcode /= 2;
+	    kcode /= 3;
 	}
 	permCode /= 2;
     }
@@ -1031,7 +1031,7 @@ void* Trun3(void* arg) {
 	present[shapeI] = 0;
     }
     //int notValid = 0;
-    for (int permCode = start; permCode < 134217728; permCode += 16) {
+    for (int permCode = start; permCode < 1 << 27; permCode += 16) {
 	if (permCode % (1 << 20) == start)
 	    printf("Thread %d: %F%% of the way there\n", start, 100 * (permCode / 134217728.0));
 	validPC = 0;
@@ -1065,18 +1065,13 @@ void* Trun3(void* arg) {
 	}
 
 	for (shapeI = 0; shapeI < 20; shapeI++) {
-	    if (count[shapeI] >= 2) {
-		present[shapeI] = 1;
-	    }
-	    if (count[shapeI] >= 3) {
-		printf("\nK%d found, shapeCodeIndex: %d, permCode: %d\n\n", count[shapeI], shapeI, permCode);
-	    }
+	    if (count[shapeI] > present[shapeI])
+		present[shapeI] = count[shapeI];
 	}
     }
     printf("\nThread %d Done\n\n", start);
     for (shapeI = 0; shapeI < 20; shapeI++) {
-	if (present[shapeI] == 0)
-	    printf("\nThread %d: Found no shapeI %d\n\n", start, shapeI);
+	printf("\nThread %d: Largest shapeI %d: %d\n\n", start, shapeI, present[shapeI]);
     }
 }
 
