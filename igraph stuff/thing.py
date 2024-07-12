@@ -91,8 +91,8 @@ print_central(g.harmonic_centrality(weights='value'), g, "Harmonic Closeness") #
 # Code that checks for K3's in this graph
 #print(g.eigenvector_centrality(weights='value'))
 #print(g.subisomorphic_vf2(g2, edge_color1=g.es['b'],edge_color2=g2.es['b']))
-g2=Graph(n=5,edges=[[0,1],[0,2],[0,3],[0,4],[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]],
-         edge_attrs={'b':[1,1,1,1,1,1,1,1,1,1]})
+g2=Graph(n=5,edges=[[0,1],[1,2],[2,3],[3,4],[4,0]],
+         edge_attrs={'b':[2,2,2,2,2]})
 i = 0
 color = []
 while (i < g.ecount()):
@@ -102,23 +102,24 @@ while (i < g.ecount()):
    else:
        color = color + [0]
    i = i + 1
-#subs = g.get_subisomorphisms_vf2(g2, edge_color1=color,edge_color2=g2.es['b'])
-subs = g.get_subisomorphisms_vf2(g2)
+subs = g.get_subisomorphisms_vf2(g2, edge_color1=g.es["value"],edge_color2=g2.es['b'])
+#subs = g.get_subisomorphisms_vf2(g2)
 subs = sort(subs)
 subs = sorted(subs, key=lambda x: (x[0], x[1], x[2], x[3], x[4]))
 
 f = open("k5s.txt", "w")
-for num in range(0,int(len(subs)/120)):
-    e = subs[num*120]
+for num in range(0,int(len(subs)/10)):
+    e = subs[num*10]
     colors = [0]*200
     for i in range(0,5):
         for j in range(i+1,5):
-            for k in range(0,int(g.es[g.get_eid(e[i],e[j])]["value"])):
-                colors[ord(g.es[g.get_eid(e[i],e[j])]["b"][k])] = 1
+            if (g.are_adjacent(e[i],e[j])):
+                for k in range(0,int(g.es[g.get_eid(e[i],e[j])]["value"])):
+                    colors[ord(g.es[g.get_eid(e[i],e[j])]["b"][k])] = 1
     sum = 0
     for n in colors:
         sum += n
-    if (sum == 3):
+    if (sum <= 3):
         f.write(str(e))
         f.write("\n")
 print(len(subs))
