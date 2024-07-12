@@ -1,10 +1,30 @@
 import matplotlib.pyplot as plt
 import igraph as ig
 from igraph import Graph
+from numpy import floor, sort
 ig.config["plotting.backend"] = "matplotlib"
-g=ig.Graph.Load('igraph stuff/Somap3.gml', 'gml')
-#g= Graph(n=3,edges=[[0,1],[1,2],[2,0]],
-#          edge_attrs={'b':[1,1,1]})
+g=ig.Graph.Load('igraph stuff/Somap3copy.gml', 'gml')
+
+
+mult = g.is_multiple()
+count = 0
+for e in mult:
+    if (e == 1):
+        count = count + 1
+print()
+print()
+print(count)
+print()
+print()
+
+for v in g.vs:
+    v['hasMult'] = 0
+i = 0
+while (i < len(mult)):
+    if (mult[i] == 1):
+        g.vs[g.es[i].source]['hasMult'] += 1
+        g.vs[g.es[i].target]['hasMult'] += 1
+    i += 1
 
 # Weight function
 def weightF(v):
@@ -40,6 +60,8 @@ def print_central(cent, graph, centMeasure):
     while (i < graph.vcount()):
         if (max == cent[i]):
             print("Label: " + g.vs[i]['label'] + ", code: " + g.vs[i]['u'] + chr(int(g.vs[i]['w'])))
+        if (g.vs[i]['hasMult'] != 0):
+            print("(Multi-edge Vertex, multi-edges " + str(g.vs[i]['hasMult']) + ") Label: " + g.vs[i]['label'] + ", code: " + g.vs[i]['u'] + chr(int(g.vs[i]['w'])) +", centrality: " + str(cent[i]))
         i = i + 1
     print("Centrality score: " + str(cent[maxI]))
     print("# of central vertices: " + str(count))
@@ -51,6 +73,7 @@ weights = []
 i = 0
 while (i < g.ecount()):
     weights = weights + [weightF(g.es[i]['value'])]
+    g.es[i]['weight'] = weightF(g.es[i]['value'])
     i = i + 1
 
 
@@ -61,19 +84,49 @@ print_central(g.closeness(weights='value'), g, "Closeness Centrality") # uses va
 print_central(g.betweenness(weights='value'), g, "Betweenness Centrality") # uses value, value(2)=w(2)=2 and value(3)=w(3)=3
 print_central(g.eigenvector_centrality(weights=weights), g, "Eigenvector Centrality") # uses weight function, so if w(v)=5-value(v), w(2) = 3 and w(3) = 2
 print_central(g.harmonic_centrality(weights='value'), g, "Harmonic Closeness") # uses value, value(2)=w(2)=2 and value(3)=w(3)=3
+# using these values for weights ensure 2-swap edges are 'more important' than 3-swap edges
+
 
 
 # Code that checks for K3's in this graph
 #print(g.eigenvector_centrality(weights='value'))
 #print(g.subisomorphic_vf2(g2, edge_color1=g.es['b'],edge_color2=g2.es['b']))
-#i = 0
-#color = []
-#while (i < g.ecount()):
-#    if (g.es[i]['b'] == 'LRB' or g.es[i]['b'] == 'LR' or g.es[i]['b'] == 'LB' or g.es[i]['b'] == 'RB'):
-#        color = color + [1]
-#    else:
-#        color = color + [0]
-#    i = i + 1
-#print(g.subisomorphic_vf2(g2, edge_color1=color,edge_color2=g2.es['b']))
+g2=Graph(n=5,edges=[[0,1],[0,2],[0,3],[0,4],[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]],
+         edge_attrs={'b':[1,1,1,1,1,1,1,1,1,1]})
+i = 0
+color = []
+while (i < g.ecount()):
+   
+   if (g.es[i]['b'] == 'WGO' or g.es[i]['b'] == 'WG' or g.es[i]['b'] == 'WO' or g.es[i]['b'] == 'GO'):
+       color = color + [1]
+   else:
+       color = color + [0]
+   i = i + 1
+#subs = g.get_subisomorphisms_vf2(g2, edge_color1=color,edge_color2=g2.es['b'])
+subs = g.get_subisomorphisms_vf2(g2)
+subs = sort(subs)
+subs = sorted(subs, key=lambda x: (x[0], x[1], x[2], x[3], x[4]))
+
+f = open("k5s.txt", "w")
+for num in range(0,int(len(subs)/120)):
+    e = subs[num*120]
+    colors = [0]*200
+    for i in range(0,5):
+        for j in range(i+1,5):
+            for k in range(0,int(g.es[g.get_eid(e[i],e[j])]["value"])):
+                colors[ord(g.es[g.get_eid(e[i],e[j])]["b"][k])] = 1
+    sum = 0
+    for n in colors:
+        sum += n
+    if (sum == 3):
+        f.write(str(e))
+        f.write("\n")
+print(len(subs))
+f.close()
+"""
+for e in subs:
+    print(e)
+print(len(subs))
+"""
 #ig.plot(g)
 #plt.show()
